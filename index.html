@@ -33,6 +33,30 @@
       </div>
     </div>
 
+    <!-- WebGPU利用不可ダイアログ -->
+    <div id="error-dialog" class="dialog-overlay" style="display: none;">
+      <div class="dialog-content">
+        <h2>WebGPUが利用できません</h2>
+        <p>このブラウザではWebLLMを利用できません。</p>
+        <div class="dialog-details">
+          <p><strong>原因:</strong></p>
+          <ul>
+            <li>お使いのブラウザがWebGPUに対応していない</li>
+            <li>GPUドライバが正しくインストールされていない</li>
+            <li>GPUハードウェアがシステムに接続されていない</li>
+            <li>ブラウザの設定でWebGPUが無効になっている</li>
+          </ul>
+          <p><strong>解決方法:</strong></p>
+          <ul>
+            <li>最新版のブラウザ (Chrome, Edge など) にアップデートしてください</li>
+            <li>GPUドライバを最新版に更新してください</li>
+            <li><a href="https://webgpureport.org/" target="_blank" rel="noopener noreferrer">WebGPU互換性チェック</a>を確認してください</li>
+          </ul>
+        </div>
+        <button id="dialog-close-button" class="dialog-button">了解</button>
+      </div>
+    </div>
+
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

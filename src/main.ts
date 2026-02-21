@@ -59,6 +59,8 @@ const sendButton = document.querySelector<HTMLButtonElement>('#send-button')!
 const modelSelect = document.querySelector<HTMLSelectElement>('#model-select')!
 const statusElement = document.querySelector<HTMLDivElement>('#status')!
 const clearButton = document.querySelector<HTMLButtonElement>('#clear-button')!
+const errorDialog = document.querySelector<HTMLDivElement>('#error-dialog')!
+const dialogCloseButton = document.querySelector<HTMLButtonElement>('#dialog-close-button')!
 
 // ============================================================================
 // IndexedDB管理
@@ -180,6 +182,35 @@ function isValidModel(model: string): model is typeof AVAILABLE_MODELS[number] {
     return AVAILABLE_MODELS.includes(model as any)
 }
 
+// WebGPUエラー検出関数
+function isWebGPUError(error: unknown): boolean {
+    const errorMessage = String(error)
+    const webgpuKeywords = [
+        'GPU',
+        'WebGPU',
+        'compatible',
+        'browser supports',
+        'Unable to find',
+    ]
+    return webgpuKeywords.some((keyword) =>
+        errorMessage.toLowerCase().includes(keyword.toLowerCase())
+    )
+}
+
+// WebGPUエラーダイアログ表示関数
+function showWebGPUErrorDialog(): void {
+    errorDialog.style.display = 'flex'
+    // アプリケーションの入力要素を無効化
+    sendButton.disabled = true
+    messageInput.disabled = true
+    modelSelect.disabled = true
+}
+
+// WebGPUエラーダイアログを閉じる関数
+function closeWebGPUErrorDialog(): void {
+    errorDialog.style.display = 'none'
+}
+
 function validateMessage(message: string): { valid: boolean; error?: string } {
     const trimmed = message.trim()
 
@@ -288,13 +319,19 @@ async function initializeEngine(): Promise<void> {
         messageInput.disabled = false
         modelSelect.disabled = false
     } catch (error) {
-        // エラー情報を安全に表示（詳細情報は非表示）
         console.error('Engine initialization error:', error)
-        statusElement.textContent =
-            'モデルのロードに失敗しました。ページをリロードしてお試しください。'
-        sendButton.disabled = true
-        messageInput.disabled = true
-        modelSelect.disabled = false
+
+        // WebGPUエラーの判定
+        if (isWebGPUError(error)) {
+            showWebGPUErrorDialog()
+            statusElement.textContent = 'WebGPUが利用できません'
+        } else {
+            statusElement.textContent =
+                'モデルのロードに失敗しました。ページをリロードしてお試しください。'
+            sendButton.disabled = true
+            messageInput.disabled = true
+            modelSelect.disabled = false
+        }
     }
 }
 
@@ -432,6 +469,11 @@ clearButton.addEventListener('click', async () => {
         console.error('Failed to clear messages:', error)
         statusElement.textContent = '会話履歴のクリアに失敗しました'
     }
+})
+
+// WebGPUエラーダイアログのクローズボタン
+dialogCloseButton.addEventListener('click', () => {
+    closeWebGPUErrorDialog()
 })
 
 initialize().catch((error) => {
