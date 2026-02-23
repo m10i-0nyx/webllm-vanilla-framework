@@ -509,7 +509,7 @@ function renderMarkdownString(markdown: string): DocumentFragment {
         }
 
         // DOMPurifyでサニタイズ（XSS対策）
-        const sanitized = DOMPurify.sanitize(parsed as string, {
+        let sanitized = DOMPurify.sanitize(parsed as string, {
             ALLOWED_TAGS: [
                 'p', 'br', 'strong', 'em', 'u', 'del', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
                 'blockquote', 'code', 'pre', 'ul', 'ol', 'li', 'a', 'img', 'table',
@@ -518,6 +518,12 @@ function renderMarkdownString(markdown: string): DocumentFragment {
             ALLOWED_ATTR: ['href', 'title', 'alt', 'src'],
             KEEP_CONTENT: true,
         })
+
+        // 不要な改行とbrタグを削除
+        sanitized = (sanitized as string)
+            .replace(/<p><br><\/p>/g, '') // 空のp+brを削除
+            .replace(/<p><\/p>/g, '') // 空のpを削除
+            .replace(/<br\s*\/?>\s*<br\s*\/?>/g, '<br>') // 連続するbrを1つに統合
 
         // DocumentFragmentに変換
         const fragment = document.createDocumentFragment()
