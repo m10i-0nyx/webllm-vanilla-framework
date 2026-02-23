@@ -28,6 +28,13 @@ interface StoredMessage extends Message {
     timestamp: number
 }
 
+interface ChatStats {
+    promptTokens: number
+    completionTokens: number
+    prefillSpeed: number | null
+    decodingSpeed: number | null
+}
+
 interface AppState {
     engine: webllm.MLCEngine | null
     messages: Message[]
@@ -35,9 +42,11 @@ interface AppState {
     selectedModel: string
     requestCount: number
     db: IDBDatabase | null
+    lastStats: ChatStats | null
 }
 
 const AVAILABLE_MODELS = [
+    'gemma-2-2b-jpn-it-q4f16_1-MLC',
     'Llama-3.1-8B-Instruct-q4f32_1-MLC',
     'Mistral-7B-Instruct-v0.3-q4f32_1-MLC',
     'NeuralHermes-2.5-Mistral-7B-q4f16_1-MLC',
@@ -50,6 +59,7 @@ const state: AppState = {
     selectedModel: AVAILABLE_MODELS[0],
     requestCount: 0,
     db: null,
+    lastStats: null,
 }
 
 // DOM要素の取得
@@ -62,6 +72,13 @@ const clearButton = document.querySelector<HTMLButtonElement>('#clear-button')!
 const errorDialog = document.querySelector<HTMLDivElement>('#error-dialog')!
 const dialogCloseButton = document.querySelector<HTMLButtonElement>('#dialog-close-button')!
 const spinnerContainer = document.querySelector<HTMLDivElement>('#spinner-container')!
+const chatStatsPanel = document.querySelector<HTMLDivElement>('#chat-stats-panel')!
+const closeStatsButton = document.querySelector<HTMLButtonElement>('#close-stats-button')!
+const statPrompt = document.querySelector<HTMLSpanElement>('#stat-prompt')!
+const statCompletion = document.querySelector<HTMLSpanElement>('#stat-completion')!
+const statTotal = document.querySelector<HTMLSpanElement>('#stat-total')!
+const statPrefill = document.querySelector<HTMLSpanElement>('#stat-prefill')!
+const statDecoding = document.querySelector<HTMLSpanElement>('#stat-decoding')!
 
 // ============================================================================
 // IndexedDB管理
@@ -210,6 +227,25 @@ function showWebGPUErrorDialog(): void {
 // WebGPUエラーダイアログを閉じる関数
 function closeWebGPUErrorDialog(): void {
     errorDialog.style.display = 'none'
+}
+
+// Chat Stats表示関数
+function showChatStats(stats: ChatStats): void {
+    chatStatsPanel.style.display = 'block'
+    state.lastStats = stats
+
+    statPrompt.textContent = String(stats.promptTokens)
+    statCompletion.textContent = String(stats.completionTokens)
+    statTotal.textContent = String(stats.promptTokens + stats.completionTokens)
+    statPrefill.textContent =
+        stats.prefillSpeed !== null ? `${stats.prefillSpeed.toFixed(1)} tok/s` : '-'
+    statDecoding.textContent =
+        stats.decodingSpeed !== null ? `${stats.decodingSpeed.toFixed(1)} tok/s` : '-'
+}
+
+// Chat Stats非表示関数
+function hideChatStats(): void {
+    chatStatsPanel.style.display = 'none'
 }
 
 function validateMessage(message: string): { valid: boolean; error?: string } {
@@ -375,12 +411,16 @@ async function sendMessage(userMessage: string): Promise<void> {
     try {
         state.requestCount++
 
-        // タイムアウトラッパー付きで実行
-        const response = await Promise.race([
+        // タイムアウトラッパー付きでストリーミング実行
+        const stream = await Promise.race([
             state.engine.chat.completions.create({
                 messages: state.messages,
                 temperature: 0.7,
                 max_tokens: 512,
+                stream: true,
+                stream_options: {
+                    include_usage: true,
+                },
             }),
             new Promise((_, reject) =>
                 setTimeout(
@@ -388,18 +428,61 @@ async function sendMessage(userMessage: string): Promise<void> {
                     SECURITY_CONFIG.MESSAGE_TIMEOUT_MS
                 )
             ),
-        ])
+        ]) as any
 
-        const completionsResponse = response as any
-        const assistantMessage =
-            completionsResponse.choices[0]?.message?.content ||
-            'エラーが発生しました'
+        let assistantMessage = ''
+        let lastMessageElement: HTMLDivElement | null = null
 
-        state.messages.push({ role: 'assistant', content: assistantMessage })
-        renderMessage('assistant', assistantMessage)
+        // ストリーミングレスポンスを処理
+        for await (const chunk of stream) {
+            const content = chunk.choices[0]?.delta?.content
+            if (content) {
+                assistantMessage += content
 
-        // IndexedDBに保存
-        await saveMessage({ role: 'assistant', content: assistantMessage })
+                // 初回メッセージ表示の場合
+                if (lastMessageElement === null) {
+                    lastMessageElement = document.createElement('div')
+                    lastMessageElement.className = 'message message-assistant'
+                    const contentDiv = document.createElement('div')
+                    contentDiv.className = 'message-content'
+                    contentDiv.textContent = content
+                    lastMessageElement.appendChild(contentDiv)
+                    chatMessages.appendChild(lastMessageElement)
+                } else {
+                    // 既存のメッセージにテキストを追加
+                    const contentDiv =
+                        lastMessageElement.querySelector('.message-content')
+                    if (contentDiv) {
+                        contentDiv.textContent = assistantMessage
+                    }
+                }
+                chatMessages.scrollTop = chatMessages.scrollHeight
+            }
+
+            // 最後のチャンクで統計情報を取得
+            if (chunk.usage) {
+                const promptTokens = chunk.usage.prompt_tokens || 0
+                const completionTokens = chunk.usage.completion_tokens || 0
+                const prefillSpeed =
+                    chunk.usage.extra?.prefill_tokens_per_s || null
+                const decodingSpeed =
+                    chunk.usage.extra?.decode_tokens_per_s || null
+
+                const stats: ChatStats = {
+                    promptTokens,
+                    completionTokens,
+                    prefillSpeed,
+                    decodingSpeed,
+                }
+                showChatStats(stats)
+            }
+        }
+
+        // メッセージを保存
+        if (assistantMessage) {
+            state.messages.push({ role: 'assistant', content: assistantMessage })
+            await saveMessage({ role: 'assistant', content: assistantMessage })
+        }
 
         trimChatHistory()
     } catch (error) {
@@ -482,6 +565,11 @@ clearButton.addEventListener('click', async () => {
         console.error('Failed to clear messages:', error)
         statusElement.textContent = '会話履歴のクリアに失敗しました'
     }
+})
+
+// Chat Stats closeボタンのイベントリスナー
+closeStatsButton.addEventListener('click', () => {
+    hideChatStats()
 })
 
 // WebGPUエラーダイアログのクローズボタン
