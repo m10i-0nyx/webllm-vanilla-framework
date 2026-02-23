@@ -52,6 +52,12 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Clean up artifacts
+        run: |
+          cd dist
+          find . -type l -delete
+          du -sh .
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
