@@ -72,8 +72,6 @@ const clearButton = document.querySelector<HTMLButtonElement>('#clear-button')!
 const errorDialog = document.querySelector<HTMLDivElement>('#error-dialog')!
 const dialogCloseButton = document.querySelector<HTMLButtonElement>('#dialog-close-button')!
 const spinnerContainer = document.querySelector<HTMLDivElement>('#spinner-container')!
-const chatStatsPanel = document.querySelector<HTMLDivElement>('#chat-stats-panel')!
-const closeStatsButton = document.querySelector<HTMLButtonElement>('#close-stats-button')!
 const statPrompt = document.querySelector<HTMLSpanElement>('#stat-prompt')!
 const statCompletion = document.querySelector<HTMLSpanElement>('#stat-completion')!
 const statTotal = document.querySelector<HTMLSpanElement>('#stat-total')!
@@ -229,9 +227,8 @@ function closeWebGPUErrorDialog(): void {
     errorDialog.style.display = 'none'
 }
 
-// Chat Stats表示関数
-function showChatStats(stats: ChatStats): void {
-    chatStatsPanel.style.display = 'block'
+// Chat Stats更新関数
+function updateChatStats(stats: ChatStats): void {
     state.lastStats = stats
 
     statPrompt.textContent = String(stats.promptTokens)
@@ -241,11 +238,6 @@ function showChatStats(stats: ChatStats): void {
         stats.prefillSpeed !== null ? `${stats.prefillSpeed.toFixed(1)} tok/s` : '-'
     statDecoding.textContent =
         stats.decodingSpeed !== null ? `${stats.decodingSpeed.toFixed(1)} tok/s` : '-'
-}
-
-// Chat Stats非表示関数
-function hideChatStats(): void {
-    chatStatsPanel.style.display = 'none'
 }
 
 function validateMessage(message: string): { valid: boolean; error?: string } {
@@ -474,7 +466,7 @@ async function sendMessage(userMessage: string): Promise<void> {
                     prefillSpeed,
                     decodingSpeed,
                 }
-                showChatStats(stats)
+                updateChatStats(stats)
             }
         }
 
@@ -565,11 +557,6 @@ clearButton.addEventListener('click', async () => {
         console.error('Failed to clear messages:', error)
         statusElement.textContent = '会話履歴のクリアに失敗しました'
     }
-})
-
-// Chat Stats closeボタンのイベントリスナー
-closeStatsButton.addEventListener('click', () => {
-    hideChatStats()
 })
 
 // WebGPUエラーダイアログのクローズボタン
