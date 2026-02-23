@@ -3,17 +3,6 @@ import * as webllm from '@mlc-ai/web-llm'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 
-// DOMPurify設定（スクリプト実行を完全に防止）
-const PURIFY_CONFIG = {
-    ALLOWED_TAGS: [
-        'p', 'br', 'strong', 'em', 'u', 'del', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-        'blockquote', 'code', 'pre', 'ul', 'ol', 'li', 'a', 'img', 'table',
-        'thead', 'tbody', 'tr', 'th', 'td', 'hr',
-    ],
-    ALLOWED_ATTR: ['href', 'title', 'alt', 'src'],
-    KEEP_CONTENT: true,
-}
-
 // セキュリティ設定
 const SECURITY_CONFIG = {
     MAX_MESSAGE_LENGTH: 2000,
@@ -519,13 +508,25 @@ function renderMarkdownString(markdown: string): DocumentFragment {
             throw new Error('Async markdown rendering is not supported')
         }
 
+        console.log('Markdown parsed:', parsed)
+
         // DOMPurifyでサニタイズ（XSS対策）
-        const sanitized = DOMPurify.sanitize(parsed, PURIFY_CONFIG)
+        const sanitized = DOMPurify.sanitize(parsed as string, {
+            ALLOWED_TAGS: [
+                'p', 'br', 'strong', 'em', 'u', 'del', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+                'blockquote', 'code', 'pre', 'ul', 'ol', 'li', 'a', 'img', 'table',
+                'thead', 'tbody', 'tr', 'th', 'td', 'hr',
+            ],
+            ALLOWED_ATTR: ['href', 'title', 'alt', 'src'],
+            KEEP_CONTENT: true,
+        })
+
+        console.log('Sanitized HTML:', sanitized)
 
         // DocumentFragmentに変換
         const fragment = document.createDocumentFragment()
         const tempDiv = document.createElement('div')
-        tempDiv.innerHTML = sanitized
+        tempDiv.innerHTML = sanitized as string
         while (tempDiv.firstChild) {
             fragment.appendChild(tempDiv.firstChild)
         }
