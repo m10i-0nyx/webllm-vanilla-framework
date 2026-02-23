@@ -547,9 +547,10 @@ button:focus-visible {
         color: #0066cc;
     }
 }
+
 /* Markdownレンダリング用スタイル */
 .message-content p {
-    margin: 0.5rem 0;
+    margin: 0.25rem 0;
 }
 
 .message-content strong {
@@ -583,7 +584,7 @@ button:focus-visible {
     padding: 1rem;
     border-radius: 4px;
     overflow-x: auto;
-    margin: 0.5rem 0;
+    margin: 0.35rem 0;
     line-height: 1.3;
 }
 
@@ -599,7 +600,7 @@ button:focus-visible {
 .message-content h4,
 .message-content h5,
 .message-content h6 {
-    margin: 0.75rem 0 0.5rem 0;
+    margin: 0.35rem 0 0.25rem 0;
     font-weight: 600;
     line-height: 1.3;
 }
@@ -629,19 +630,19 @@ button:focus-visible {
 .message-content blockquote {
     border-left: 4px solid rgba(102, 126, 234, 0.5);
     padding-left: 1rem;
-    margin: 0.5rem 0;
+    margin: 0.25rem 0;
     color: rgba(255, 255, 255, 0.7);
     font-style: italic;
 }
 
 .message-content ul,
 .message-content ol {
-    margin: 0.5rem 0;
+    margin: 0.25rem 0;
     padding-left: 2rem;
 }
 
 .message-content li {
-    margin: 0.3rem 0;
+    margin: 0.1rem 0;
 }
 
 .message-content a {
@@ -659,12 +660,12 @@ button:focus-visible {
     max-width: 100%;
     height: auto;
     border-radius: 4px;
-    margin: 0.5rem 0;
+    margin: 0.35rem 0;
 }
 
 .message-content table {
     border-collapse: collapse;
-    margin: 0.5rem 0;
+    margin: 0.35rem 0;
     width: 100%;
     font-size: 0.95rem;
 }
@@ -688,5 +689,5 @@ button:focus-visible {
 .message-content hr {
     border: none;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
-    margin: 0.75rem 0;
+    margin: 0.35rem 0;
 }
